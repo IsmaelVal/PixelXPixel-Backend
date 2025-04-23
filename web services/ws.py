@@ -63,129 +63,127 @@ def login():
 
 # Obtener todos los personajes
 
-
-@app.route('/personajes', methods=['GET'])
-def get_personajes():
+@app.route('/test', methods=['GET'])
+def get_all():
+    data = request.json
+    table = data['table']
     conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor(as_dict=True)
-            cursor.execute("SELECT id, name, email FROM personajes")
-            personajes = cursor.fetchall()
-            return jsonify(personajes), 200
-        except Exception as e:
-            return jsonify({'error': f'Error al obtener personajes: {e}'}), 500
-        finally:
-            conn.close()
-    else:
-        return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
+    cursor = conn.cursor(as_dict=True)
+    cursor.execute('SELECT * FROM ' + table)
+    data = cursor.fetchall()
+    conn.close()
+    return jsonify(data)
 
-# Obtener un personaje por ID
-
-
-@app.route('/personajes/<int:id>', methods=['GET'])
-def get_personaje(id):
+@app.route('/test/<int:id>', methods=['GET'])
+def get_one(id):
+    data = request.json
+    table = data['table']
+    idnombre = data['idnombre']
     conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor(as_dict=True)
-            cursor.execute(
-                "SELECT id, name, email FROM personajes WHERE id = %d", (id,))
-            personaje = cursor.fetchone()
-            if personaje:
-                return jsonify(personaje), 200
-            else:
-                return jsonify({'mensaje': 'Personaje no encontrado'}), 404
-        except Exception as e:
-            return jsonify({'error': f'Error al obtener personaje: {e}'}), 500
-        finally:
-            conn.close()
+    cursor = conn.cursor(as_dict=True)
+    cursor.execute('SELECT * FROM ' + table + ' WHERE ' + idnombre + ' = %s ', (id))
+    data = cursor.fetchone()
+    conn.close()
+    if data:
+        return jsonify(data)
     else:
-        return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
+        return jsonify({'mensaje': 'Registro no encontrado'}), 404
+    
 
-# Crear un nuevo personaje
+# Añadir info
 
+TABLES = {
+    "usuario": ["puntaje, instagram, contrasena"],
+    "boleto": ["tipo", "idusuario_usuario"],
+    "casillapixel": ["estado", "posicion", "idimagen_imagen", "idusuario_usuario", "idpregunta_pregunta"],
+    "imagen": ["respuesta", "horarespuesta", "idevento_evento"],
+    "pregunta": ["opcionA", "opcionB", "opcionC", "opcionD", "opcioncorrecta", "numVecesRespondida", "pregunta"],
+    "evento": ["horainicio", "horafin"]
+}
 
-@app.route('/personajes', methods=['POST'])
-def create_personaje():
-    data = request.get_json()
-    id = data.get('id')
-    name = data.get('name')
-    email = data.get('email')
+@app.route('/test', methods=['POST'])
+def create():
+    try:
+        data = request.json
+        table = data.get('table')
 
-    if not id or not name or not email:
-        return jsonify({'error': 'Se requiere id, nombre y correo electrónico'}), 400
+        # Verificar si la tabla es válida
+        if table not in TABLES:
+            return jsonify({'error': 'Tabla no válida'}), 400
 
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO personajes (id, name, email) VALUES (%d, %s, %s)", (id, name, email))
-            conn.commit()
-            return jsonify({'mensaje': 'Personaje creado exitosamente'}), 201
-        except Exception as e:
-            conn.rollback()
-            return jsonify({'error': f'Error al crear personaje: {e}'}), 500
-        finally:
-            conn.close()
-    else:
-        return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
+        # Obtener los campos y validar que todos están en la petición
+        fields = TABLES[table]
+        values = [data.get(field) for field in fields]
 
-# Actualizar un personaje existente
+        if None in values:
+            return jsonify({'error': 'Faltan campos en la petición'}), 400
 
+        # Construir la consulta SQL
+        query = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({', '.join(['%s'] * len(fields))})"
 
-@app.route('/personajes/<int:id>', methods=['PUT'])
-def update_personaje(id):
-    data = request.get_json()
-    name = data.get('name')
-    email = data.get('email')
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
+        conn.close()
 
-    if not name or not email:
-        return jsonify({'error': 'Se requiere nombre y correo electrónico'}), 400
+        return jsonify({'mensaje': f'Registro insertado en {table}'}), 201
 
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE personajes SET name = %s, email = %s WHERE id = %d", (name, email, id))
-            conn.commit()
-            if cursor.rowcount > 0:
-                return jsonify({'mensaje': 'Personaje actualizado exitosamente'}), 200
-            else:
-                return jsonify({'mensaje': 'Personaje no encontrado'}), 404
-        except Exception as e:
-            conn.rollback()
-            return jsonify({'error': f'Error al actualizar personaje: {e}'}), 500
-        finally:
-            conn.close()
-    else:
-        return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
-
-# Eliminar un personaje por ID
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
-@app.route('/personajes/<int:id>', methods=['DELETE'])
-def delete_personaje(id):
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM personajes WHERE id = %d", (id,))
-            conn.commit()
-            if cursor.rowcount > 0:
-                return jsonify({'mensaje': 'Personaje eliminado exitosamente'}), 200
-            else:
-                return jsonify({'mensaje': 'Personaje no encontrado'}), 404
-        except Exception as e:
-            conn.rollback()
-            return jsonify({'error': f'Error al eliminar personaje: {e}'}), 500
-        finally:
-            conn.close()
-    else:
-        return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
+# Actualizar 
+@app.route('/test/<table>/<int:id>', methods=['PUT'])
+def update(table, id):
+    try:
+        if table not in TABLES:
+            return jsonify({'error': 'Tabla no válida'}), 400
 
+        data = request.json
+        fields = TABLES[table]
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+        # Verificar si se enviaron datos para actualizar
+        updates = {field: data.get(field) for field in fields if field in data}
+        if not updates:
+            return jsonify({'error': 'No hay datos para actualizar'}), 400
+
+        # Construir la consulta SQL
+        set_clause = ', '.join([f"{key} = %s" for key in updates.keys()])
+        values = list(updates.values()) + [id]
+
+        query = f"UPDATE {table} SET {set_clause} WHERE {table[:-1]}id = %s"  # Suponiendo que la PK es el nombre de la tabla + "id"
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
+        conn.close()
+
+        return jsonify({'mensaje': f'Registro en {table} actualizado'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Eliminar 
+@app.route('/test/<table>/<int:id>', methods=['DELETE'])
+def delete(table, id):
+    try:
+        if table not in TABLES:
+            return jsonify({'error': 'Tabla no válida'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Asumiendo que la clave primaria sigue el patrón idtabla
+        primary_key = f"{table[:-1]}id"  
+
+        query = f"DELETE FROM {table} WHERE {primary_key} = %s"
+        cursor.execute(query, (id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'mensaje': f'Registro en {table} eliminado'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

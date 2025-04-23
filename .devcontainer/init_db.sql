@@ -1,6 +1,4 @@
--- ---
--- Drop tables if they exist (clean start)
--- ---
+-- Limpiar
 DROP TABLE IF EXISTS casillapixel;
 DROP TABLE IF EXISTS boleto;
 DROP TABLE IF EXISTS imagen;
@@ -8,12 +6,11 @@ DROP TABLE IF EXISTS pregunta;
 DROP TABLE IF EXISTS evento;
 DROP TABLE IF EXISTS usuario;
 
--- ---
--- Create tables
--- ---
-
+-- Tablas
 CREATE TABLE usuario (
   idusuario INT IDENTITY(1,1) PRIMARY KEY,
+  instagram VARCHAR(255) NOT NULL,
+  contrasena CHAR(40) NOT NULL,
   puntaje INT
 );
 
@@ -51,7 +48,7 @@ CREATE TABLE pregunta (
 
 CREATE TABLE casillapixel (
   idpixel INT IDENTITY(1,1) PRIMARY KEY,
-  estado VARCHAR(10) NOT NULL DEFAULT 'NULL',
+  estado VARCHAR(10) NOT NULL DEFAULT 'inactivo',
   posicion INT NOT NULL,
   idimagen_imagen INT,
   idusuario_usuario INT NOT NULL,
@@ -61,11 +58,11 @@ CREATE TABLE casillapixel (
   FOREIGN KEY (idpregunta_pregunta) REFERENCES pregunta (idpregunta)
 );
 
--- ---
--- Insert test data
--- ---
-
-INSERT INTO usuario (puntaje) VALUES (100), (200), (150);
+-- Datos
+INSERT INTO usuario (instagram, contrasena, puntaje) VALUES
+('user1', '1234567890123456789012345678901234567890', 100),
+('user2', 'abcdefabcdefabcdefabcdefabcdefabcdefabcd', 200),
+('user3', 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', 150);
 
 INSERT INTO boleto (tipo, idusuario_usuario) VALUES
 (1, 1),
