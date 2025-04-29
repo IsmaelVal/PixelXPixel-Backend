@@ -114,7 +114,7 @@ def get_one(table, id):
 # Añadir info
 
 TABLES = {
-    "usuario": ["username, contrasena, puntaje"],
+    "usuario": ["username", "contrasena", "puntaje"],
     "boleto": ["tipo", "idusuario_usuario"],
     "casillapixel": ["estado", "posicion", "idimagen_imagen", "idusuario_usuario", "idpregunta_pregunta"],
     "imagen": ["respuesta", "horarespuesta", "idevento_evento"],
