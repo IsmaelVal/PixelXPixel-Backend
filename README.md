@@ -31,6 +31,10 @@ source ~/.bashrc
 ### Usar sqlcmd para conectarse desde la terminal
 ```sh
 sqlcmd -S localhost -U sa -P YourPassword123!
+
+
+##o asi para correr el archivo
+sqlcmd -S localhost -U sa -P YourPassword123! -i init_db.sql
 ```
 
 ### Crear tabla de usuarios
