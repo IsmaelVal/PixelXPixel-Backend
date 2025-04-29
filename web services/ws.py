@@ -53,7 +53,7 @@ def login():
         try:
             cursor = conn.cursor(as_dict=True)
             cursor.execute(
-                "SELECT username, contrasena FROM usuarios WHERE username = %s", (username,))
+                "SELECT username, contrasena FROM usuario WHERE username = %s", (username,))
             user = cursor.fetchone()
 
             if user and verify_password(user['contrasena'], password):
