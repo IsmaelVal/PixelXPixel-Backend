@@ -136,6 +136,12 @@ def create():
         fields = TABLES[table]
         values = [data.get(field) for field in fields]
 
+        # Hashear la contraseña si es usuario
+        if table == 'usuario':
+            contrasena_index = fields.index('contrasena')
+            raw_password = values[contrasena_index]
+            values[contrasena_index] = hashlib.sha1(raw_password.encode()).hexdigest()
+
         if None in values:
             return jsonify({'error': 'Faltan campos en la petición'}), 400
 
