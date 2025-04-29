@@ -13,6 +13,15 @@ DATABASE = 'master'
 USERNAME = 'sa'
 PASSWORD = 'YourPassword123!'
 
+# Diccionario para claves primarias correctas
+PRIMARY_KEYS = {
+    "usuario": "idusuario",
+    "boleto": "idboleto",
+    "casillapixel": "idpixel",
+    "imagen": "idimagen",
+    "pregunta": "idpregunta",
+    "evento": "idevento"
+}
 
 def get_db_connection():
     try:
@@ -74,26 +83,38 @@ def get_all():
     conn.close()
     return jsonify(data)
 
-@app.route('/test/<int:id>', methods=['GET'])
-def get_one(id):
-    data = request.json
-    table = data['table']
-    idnombre = data['idnombre']
-    conn = get_db_connection()
-    cursor = conn.cursor(as_dict=True)
-    cursor.execute('SELECT * FROM ' + table + ' WHERE ' + idnombre + ' = %s ', (id))
-    data = cursor.fetchone()
-    conn.close()
-    if data:
-        return jsonify(data)
-    else:
-        return jsonify({'mensaje': 'Registro no encontrado'}), 404
+@app.route('/test/<table>/<int:id>', methods=['GET'])
+def get_one(table, id):
+    try:
+        if table not in TABLES:
+            return jsonify({'error': 'Tabla no válida'}), 400
+
+        if table not in PRIMARY_KEYS:
+            return jsonify({'error': 'Clave primaria no definida para esta tabla'}), 400
+
+        primary_key = PRIMARY_KEYS[table]
+
+        conn = get_db_connection()
+        cursor = conn.cursor(as_dict=True)
+
+        query = f"SELECT * FROM {table} WHERE {primary_key} = %s"
+        cursor.execute(query, (id,))
+        data = cursor.fetchone()
+        conn.close()
+
+        if data:
+            return jsonify(data)
+        else:
+            return jsonify({'mensaje': 'Registro no encontrado'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 
 # Añadir info
 
 TABLES = {
-    "usuario": ["puntaje, instagram, contrasena"],
+    "usuario": ["username, contrasena, puntaje"],
     "boleto": ["tipo", "idusuario_usuario"],
     "casillapixel": ["estado", "posicion", "idimagen_imagen", "idusuario_usuario", "idpregunta_pregunta"],
     "imagen": ["respuesta", "horarespuesta", "idevento_evento"],
@@ -134,25 +155,33 @@ def create():
 
 
 # Actualizar 
+
 @app.route('/test/<table>/<int:id>', methods=['PUT'])
 def update(table, id):
     try:
+        # Validar tabla
         if table not in TABLES:
             return jsonify({'error': 'Tabla no válida'}), 400
+
+        if table not in PRIMARY_KEYS:
+            return jsonify({'error': 'Clave primaria no definida para esta tabla'}), 400
 
         data = request.json
         fields = TABLES[table]
 
-        # Verificar si se enviaron datos para actualizar
+        # Preparar los campos a actualizar
         updates = {field: data.get(field) for field in fields if field in data}
         if not updates:
             return jsonify({'error': 'No hay datos para actualizar'}), 400
 
-        # Construir la consulta SQL
+        # Construir SET y valores
         set_clause = ', '.join([f"{key} = %s" for key in updates.keys()])
         values = list(updates.values()) + [id]
 
-        query = f"UPDATE {table} SET {set_clause} WHERE {table[:-1]}id = %s"  # Suponiendo que la PK es el nombre de la tabla + "id"
+        # Usar el nombre real de la primary key
+        primary_key = PRIMARY_KEYS[table]
+
+        query = f"UPDATE {table} SET {set_clause} WHERE {primary_key} = %s"
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -160,10 +189,11 @@ def update(table, id):
         conn.commit()
         conn.close()
 
-        return jsonify({'mensaje': f'Registro en {table} actualizado'}), 200
+        return jsonify({'mensaje': f'Registro en {table} actualizado correctamente'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 # Eliminar 
 @app.route('/test/<table>/<int:id>', methods=['DELETE'])
@@ -172,18 +202,20 @@ def delete(table, id):
         if table not in TABLES:
             return jsonify({'error': 'Tabla no válida'}), 400
 
+        if table not in PRIMARY_KEYS:
+            return jsonify({'error': 'Clave primaria no definida para esta tabla'}), 400
+
+        primary_key = PRIMARY_KEYS[table]
+
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # Asumiendo que la clave primaria sigue el patrón idtabla
-        primary_key = f"{table[:-1]}id"  
 
         query = f"DELETE FROM {table} WHERE {primary_key} = %s"
         cursor.execute(query, (id,))
         conn.commit()
         conn.close()
 
-        return jsonify({'mensaje': f'Registro en {table} eliminado'}), 200
+        return jsonify({'mensaje': f'Registro en {table} eliminado correctamente'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

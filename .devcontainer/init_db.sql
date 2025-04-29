@@ -9,7 +9,7 @@ DROP TABLE IF EXISTS usuario;
 -- Tablas
 CREATE TABLE usuario (
   idusuario INT IDENTITY(1,1) PRIMARY KEY,
-  instagram VARCHAR(255) NOT NULL,
+  username VARCHAR(255) NOT NULL,
   contrasena CHAR(40) NOT NULL,
   puntaje INT
 );
@@ -59,7 +59,7 @@ CREATE TABLE casillapixel (
 );
 
 -- Datos
-INSERT INTO usuario (instagram, contrasena, puntaje) VALUES
+INSERT INTO usuario (username, contrasena, puntaje) VALUES
 ('user1', '1234567890123456789012345678901234567890', 100),
 ('user2', 'abcdefabcdefabcdefabcdefabcdefabcdefabcd', 200),
 ('user3', 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', 150);
