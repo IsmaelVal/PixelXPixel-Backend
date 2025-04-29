@@ -38,6 +38,54 @@ def verify_password(stored_password_hash, provided_password):
         provided_password.encode()).hexdigest()
     return stored_password_hash == hashed_provided_password
 
+@app.route('/usuariored', methods=['POST'])
+def registro_red_social():
+    """
+    Recibe JSON { usuario: <nombreFacebook>, contacto: 'Facebook' }
+    y guarda (o recupera) ese usuario en tu tabla 'usuario'.
+    Devuelve: { mensaje: ..., idUsuario: <nuevo o existente> }
+    """
+    try:
+        data = request.get_json()
+        nombre_fb = data.get('usuario')
+        contacto  = data.get('contacto')  # aquí siempre 'Facebook'
+
+        if not nombre_fb or not contacto:
+            return jsonify({'error': 'Faltan campos obligatorios'}), 400
+
+        conn   = get_db_connection()
+        cursor = conn.cursor(as_dict=True)
+
+        # 1) Si ya existe un username igual, devolvemos su id:
+        cursor.execute("SELECT idusuario FROM usuario WHERE username = %s", (nombre_fb,))
+        existe = cursor.fetchone()
+        if existe:
+            conn.close()
+            return jsonify({
+                'mensaje': 'Usuario ya registrado',
+                'idUsuario': existe['idusuario']
+            }), 200
+
+        # 2) Si no existe, insertamos uno nuevo (sin contraseña)
+        cursor.execute(
+            "INSERT INTO usuario (username, contrasena, puntaje) VALUES (%s, %s, %s)",
+            (nombre_fb, '', 0)
+        )
+        conn.commit()
+
+        # 3) Obtenemos el último id insertado
+        cursor.execute("SELECT @@IDENTITY AS idusuario")
+        nuevo = cursor.fetchone()['idusuario']
+        conn.close()
+
+        return jsonify({
+            'mensaje': 'Registrado exitosamente',
+            'idUsuario': nuevo
+        }), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/login', methods=['POST'])
 def login():
