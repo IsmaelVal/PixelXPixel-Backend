@@ -1,126 +1,144 @@
-# Servicios Web para login usando MSSQLServer como base de datos, además se adiciona una tabla 'personajes' que también usaremos como ejemplo
+# Pixel x Pixel Back End
 
-Este repositorio contiene un ejercicio de conexión a una instancia de **SQL Server** que corre dentro de un contenedor Docker en **GitHub Codespaces** utilizando el paquete **pymssql** para Python.
+Este repositorio contiene la lógica del servidor y la base de datos para el juego **Pixel x Pixel**. Incluye:
 
-## Prerequisitos
+* Un contenedor de desarrollo con Python y SQL Server.
+* El script de inicialización de la base de datos (`init_db.sql`) con tablas y datos de ejemplo.
+* Un pequeño front-end de prueba en `static/index.html` para invocar los endpoints CRUD genéricos.
+* Servicios REST en `web services/ws.py` (Flask + pymssql + Flask-CORS).
 
-Antes de comenzar, asegúrate de tener:
+---
 
-- **GitHub Codespaces** habilitado.
-- **Docker** ejecutándose en tu Codespace.
-- **Python 3** instalado.
-- **pymssql** instalado en tu entorno Python.
+## Pre-requisitos
 
-### Iniciar la instancia de SQL Server en Docker
+Antes de empezar, asegúrate de tener:
 
-Para iniciar una instancia de **SQL Server** en un contenedor Docker, ejecuta el siguiente comando en la terminal de tu **GitHub Codespace**:
+* **GitHub Codespaces** o Docker + Python 3.11 en tu máquina local.
+* **Docker** corriendo (solo si no usas Codespaces).
+* El contenedor de SQL Server disponible en el puerto **1433**.
+* Python 3.11 y los paquetes listados en `.devcontainer/devcontainer.json`.
 
-```sh
+---
+
+## Arrancar el contenedor (Codespaces)
+
+1. Abre este repositorio en GitHub Codespaces.
+2. El `.devcontainer/devcontainer.json` instalará **Python 3.11** y `docker-in-docker`.
+3. Al crear el Codespace, automáticamente correrá:
+
+   ```bash
+   pip install pymssql flask flask-cors requests
+   ```
+4. El contenedor forwardea los puertos **1433**, **2025**, **5000**.
+
+---
+
+## Inicializar la base de datos
+
+Dentro del Codespace (o en tu host con `sqlcmd` apuntando a tu SQL Server), ejecuta:
+
+```bash
+# Lanza un contenedor de SQL Server si no está ya levantado
 docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=YourPassword123!' \
-   -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
-```
+  -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
 
 ### Instalar sqlcmd
-```sh
+sh
 sudo apt update
 sudo apt install mssql-tools unixodbc-dev
 echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
 source ~/.bashrc
-```
 
-### Usar sqlcmd para conectarse desde la terminal
-```sh
+# Conéctate con sqlcmd
 sqlcmd -S localhost -U sa -P YourPassword123!
 
-
-##o asi para correr el archivo
-sqlcmd -S localhost -U sa -P YourPassword123! -i init_db.sql
-```
-
-### Crear tabla de usuarios
-```sh
-CREATE TABLE usuarios (
-   username VARCHAR(50) PRIMARY KEY,
-   nombre_completo VARCHAR(255) NOT NULL,
-   contrasena CHAR(40) NOT NULL
-);
+# Desde sqlcmd, ejecuta:
+:r .devcontainer/init_db.sql
 GO
-```
-### Crear tabla personajes
-```sh
-CREATE TABLE personajes (
-   id INT PRIMARY KEY,
-   name NVARCHAR(50),
-   email NVARCHAR(100)
-);
-GO
-```
 
-### Agregar un usuario ejemplo (la contraseña es 'luke')
-```sh
-INSERT INTO usuarios VALUES 
-('dvader', 'Darth Vader', '6b3799be4300e44489a08090123f3842e6419da5');
-GO
-```
-
-### Agregar algunos personajes
-```sh
-INSERT INTO personajes (id, name, email) VALUES
-(1, 'Mark Grayson', 'mark@gmail.com'),
-(2, 'Allen the Alien', 'allen@gmail.com'),
-(3, 'Atom Eve', 'eve@gmail.com');
-GO
-```
-
-### Cerrar sqlcmd
-```sh
+# Sal de sqlcmd
 quit
 ```
 
-# Probar servicios web
+Esto creará las tablas (`usuario`, `boleto`, `evento`, `imagen`, `pregunta`, `casillapixel`) y cargará datos de ejemplo.
 
-## Prerequisitos
+---
 
-- Se ejecutaron los comandos SQL previos
-
-
-### Ejecución de servidor de servicios web
-
-Ejecuta el siguiente comando en la terminal de tu **GitHub Codespace**:
-
-```sh
-cd web\ services/
-python ws.py
+## Estructura del proyecto
 
 ```
-### Ejemplos para consumir servicios web desde la terminal
-
-Abra **otra terminal**  (no cierre la terminal que está ejecutando el servidor), y ejecute el siguiente comando para probar el servicio web de autenticación:
-```sh
-curl -X POST http://127.0.0.1:5000/login -H "Content-Type: application/json" -d '{"username": "dvader", "password": "luke"}'
+Pixel-x-Pixel-backend/
+├── .devcontainer/
+│   ├── devcontainer.json    # configuración del entorno Codespaces
+│   └── init_db.sql          # script de creación y población de la BD
+├── static/
+│   └── index.html           # página de prueba CRUD genérico
+└── web services/
+    └── ws.py                # Flask app con endpoints de login y CRUD
 ```
 
-Obtener todos los personajes:
-```sh
-curl http://127.0.0.1:5000/personajes
-```
+---
 
-Obtener un personaje:
-```sh
-curl http://127.0.0.1:5000/personajes/1
-```
+## Ejecutar el servidor
 
-Crear un personaje:
-```sh
-curl -X POST -H "Content-Type: application/json" -d '{"id": 4, "name": "Oliver Grayson", "email": "oliver@gmail.com"}' http://127.0.0.1:5000/personajes
-```
+1. Entra en el folder de servicios web:
 
-Actualizar un personaje:
-```sh
-curl -X PUT -H "Content-Type: application/json" -d '{"name": "Hijo de Nolan", "email": "oliver@gmail.com"}' http://127.0.0.1:5000/personajes/4
-```
+   ```bash
+   cd "web services"
+   ```
 
-Borrar un personaje:
-```sh
-curl -X DELETE http://127.0.0.1:5000/personajes/4
-```
+2. Asegúrate de que la DB SQL Server esté corriendo y hayas importado `init_db.sql`.
+
+3. Arranca la API Flask:
+
+   ```bash
+   python ws.py
+   ```
+
+   * La app escuchará en `http://localhost:5000`.
+   * CORS está habilitado para todas las rutas.
+
+---
+
+## Probar endpoints
+
+### Autenticación
+
+* **POST** `/usuariored`
+  Registro rápido vía redes sociales:
+
+  ```json
+  { "usuario": "nickFB", "contacto": "Facebook" }
+  ```
+
+* **POST** `/login`
+  Login tradicional:
+
+  ```json
+  { "username": "user1", "password": "laClave" }
+  ```
+
+### CRUD Genérico
+
+Carga `static/index.html` en tu navegador y usa el formulario para invocar:
+
+* **GET**  `/test`            – obtener todos (envía `{ table: "usuario" }` en body)
+* **GET**  `/test/<table>/<id>`
+* **POST** `/test`            – insertar (body con `{ table, campo1:valor1,… }`)
+* **PUT**  `/test/<table>/<id>`– actualizar (body con `{ campo1:valor… }`)
+* **DELETE** `/test/<table>/<id>`
+
+---
+
+## Tecnologías usadas
+
+* **Flask** – micro-framework Python
+* **pymssql** – driver para SQL Server
+* **Flask-CORS** – habilita CORS
+* **Docker** – contenedor SQL Server
+* **sqlcmd** – utilitario CLI para SQL Server
+
+---
+
+> **Nota:**
+> Ajusta credenciales y puertos en `ws.py` y en tu contenedor según tus necesidades.
